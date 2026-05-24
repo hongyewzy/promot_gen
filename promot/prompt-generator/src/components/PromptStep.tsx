@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, RefreshCw, Copy, Sparkles, CheckCircle, MessageSquareText, Download, FileText } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Copy, Sparkles, CheckCircle, MessageSquareText, Download, FileText, Wand2, BarChart3 } from 'lucide-react';
 import type { CharacterInfo, StyleSettings, PromptResult } from '@/types';
 import { BODY_OPTIONS, EXPRESSION_OPTIONS, CAMERA_OPTIONS } from '@/components/SettingsStep';
 
@@ -124,6 +124,28 @@ export default function PromptStep({ characters, settings, promptResult, onBack,
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     }
+  };
+
+  const [optimizingIdx, setOptimizingIdx] = useState<number | null>(null);
+  const [optimizedResults, setOptimizedResults] = useState<Map<number, { optimized: string; diagnosis: { dimensions: { name: string; score: number; suggestion: string }[]; totalScore: number } }>>(new Map());
+
+  const handleOptimize = async (idx: number) => {
+    const result = results.get(idx);
+    if (!result) return;
+
+    setOptimizingIdx(idx);
+    try {
+      const res = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: result.chinese }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOptimizedResults((prev) => new Map(prev).set(idx, data));
+      }
+    } catch { /* 静默失败 */ }
+    setOptimizingIdx(null);
   };
 
   const orientationTag = settings.orientation === 'portrait' ? '【手机壁纸·竖屏9:16构图】' : '【电脑壁纸·横屏16:9构图】';
@@ -246,12 +268,59 @@ export default function PromptStep({ characters, settings, promptResult, onBack,
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-medium">中文提示词</h4>
-                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(result.chinese, `chinese-${idx}`)}>
-                          {copiedField === `chinese-${idx}` ? <CheckCircle className="w-3 h-3 mr-1 text-green-500" /> : <Copy className="w-3 h-3 mr-1" />}
-                          {copiedField === `chinese-${idx}` ? '已复制' : '复制'}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleOptimize(idx)} disabled={optimizingIdx === idx}>
+                            {optimizingIdx === idx ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Wand2 className="w-3 h-3 mr-1" />}
+                            {optimizingIdx === idx ? '优化中...' : '优化提示词'}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(result.chinese, `chinese-${idx}`)}>
+                            {copiedField === `chinese-${idx}` ? <CheckCircle className="w-3 h-3 mr-1 text-green-500" /> : <Copy className="w-3 h-3 mr-1" />}
+                            {copiedField === `chinese-${idx}` ? '已复制' : '复制'}
+                          </Button>
+                        </div>
                       </div>
                       <Textarea value={result.chinese} readOnly className="min-h-[120px] resize-none bg-muted/30" />
+
+                      {/* 优化结果 */}
+                      {optimizedResults.has(idx) && (
+                        <div className="mt-3 space-y-2 border-t pt-3">
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-primary" />
+                            <h4 className="text-sm font-medium">Skill 优化结果</h4>
+                            <span className="text-xs text-muted-foreground">
+                              诊断得分：{optimizedResults.get(idx)?.diagnosis.totalScore}/12
+                            </span>
+                          </div>
+                          {/* 诊断维度 */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                            {optimizedResults.get(idx)?.diagnosis.dimensions.map((dim, dimIdx) => (
+                              <div key={dimIdx} className="flex items-center gap-1.5 text-xs">
+                                <span className="text-muted-foreground">{dim.name}</span>
+                                <span className={`font-medium ${dim.score === 2 ? 'text-green-500' : dim.score === 1 ? 'text-yellow-500' : 'text-red-400'}`}>
+                                  {'●'.repeat(dim.score)}{'○'.repeat(2 - dim.score)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* 优化后提示词 */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">优化后提示词</span>
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                const text = optimizedResults.get(idx)?.optimized || '';
+                                navigator.clipboard.writeText(text);
+                              }}>
+                                <Copy className="w-3 h-3 mr-1" /> 复制
+                              </Button>
+                            </div>
+                            <Textarea
+                              value={optimizedResults.get(idx)?.optimized || ''}
+                              readOnly
+                              className="min-h-[80px] resize-none bg-primary/5 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

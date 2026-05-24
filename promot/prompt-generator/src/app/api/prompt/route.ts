@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { longcat, LONGCAT_MODEL } from '@/lib/longcat';
 import { extractJson } from '@/lib/utils';
+import { getSkillSystemPrompt } from '@/lib/perfector';
 import type { CharacterInfo, StyleSettings } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -97,7 +98,17 @@ ${charDescriptions}`;
 - 风格关键词：clean editorial, publication-ready, soft diffused lighting, low visual noise
 - 禁止项：no grain, no dirty texture, no random speckles, no messy background, no harsh glow`;
 
+    const skillKnowledge = getSkillSystemPrompt();
+
     userPrompt += `
+
+---
+你是一位专业的AI生图提示词工程师。请遵循以下知识框架来生成和优化提示词：
+
+${skillKnowledge}
+
+---
+请按照以上框架，先对当前提示词素材进行6维度诊断（主体/场景/风格/镜头/氛围/细节），然后生成最优化的中文提示词。
 
 严格只返回以下 JSON 对象，不要任何解释、不要 markdown 代码块、不要其他任何内容：
 {
