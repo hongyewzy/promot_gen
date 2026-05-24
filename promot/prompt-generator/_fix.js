@@ -1,0 +1,11 @@
+﻿const fs = require('fs');
+const path = require('path');
+const p = path.join(__dirname, 'src', 'app', 'api', 'style', 'route.ts');
+let c = fs.readFileSync(p, 'utf8');
+const old = 'await fetch(http:///api/hot-options);';
+const nw = 'await fetch(http://' + '/api/hot-options);';
+console.log('found:', c.includes(old));
+console.log('replacement:', nw);
+c = c.replace(old, nw);
+fs.writeFileSync(p, c, 'utf8');
+console.log('Fixed');

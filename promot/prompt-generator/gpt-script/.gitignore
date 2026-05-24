@@ -1,0 +1,24 @@
+﻿# 运行时生成文件
+cookies.json
+chrome_user_data/
+output/
+__pycache__/
+run.log
+prompts.txt
+*.png
+
+# 虚拟环境
+.venv/
+.venv-old/
+
+# Python
+.pytest_cache/
+.python-version
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
