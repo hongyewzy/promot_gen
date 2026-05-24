@@ -129,13 +129,13 @@ async def main(prompt_file: str):
 
             # 发送提示词
             await send_prompt(page, text)
-            logger.info("已发送，等待 ChatGPT 回复完成...")
+            logger.info("已发送，等待 ChatGPT 图片生成完成（约 90s）...")
 
-            # 等待 ChatGPT 回复完成（输入框重新可用）
+            # 等待 ChatGPT 图片生成完成（输入框恢复后再等 90s）
             await wait_for_generation_complete(page)
 
-            # 回复完成后，短暂等待让图片渲染完成
-            await asyncio.sleep(2)
+            # 图片渲染缓冲
+            await asyncio.sleep(3)
 
             # 检查结果：有图片 / 被拒绝 / 生成失败
             result = await check_image_or_rejection(page, before_count)

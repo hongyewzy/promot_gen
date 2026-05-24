@@ -29,28 +29,40 @@ class GenerationFailed(Exception):
 
 async def wait_for_generation_complete(page, timeout: int = MAX_WAIT):
     """
-    等待 ChatGPT 完成回复。
-    判断标准：输入框重新可见可用（ChatGPT 回复完成后输入框会恢复）。
+    等待 ChatGPT 完成图片生成。
+
+    策略：
+    1. 先等输入框恢复可用（ChatGPT 文字回复完成的标志）
+    2. 输入框恢复后，再固定等待 90 秒，确保图片真正生成完成
+       （ChatGPT 是流式回复，文字出来时图片可能还在生成中）
+
     超时抛出 TimeoutError。
     """
+    MIN_WAIT_AFTER_INPUT = 90  # 输入框恢复后至少再等 90 秒
     elapsed = 0
+    input_ready_time = None
+
     while elapsed < timeout:
         await asyncio.sleep(POLL_INTERVAL)
         elapsed += POLL_INTERVAL
 
-        # 检查输入框是否重新可用（回复完成的标志）
-        try:
-            input_el = await page.query_selector(INPUT_SELECTOR)
-            if input_el:
-                is_disabled = await input_el.get_attribute("disabled")
-                is_readonly = await input_el.get_attribute("aria-disabled")
-                # 输入框存在且没有被禁用 = 回复完成
-                if is_disabled is None and is_readonly is None:
-                    return
-        except Exception:
-            pass
+        if input_ready_time is None:
+            # 阶段 1：等待输入框恢复可用
+            try:
+                input_el = await page.query_selector(INPUT_SELECTOR)
+                if input_el:
+                    is_disabled = await input_el.get_attribute("disabled")
+                    is_readonly = await input_el.get_attribute("aria-disabled")
+                    if is_disabled is None and is_readonly is None:
+                        input_ready_time = elapsed
+            except Exception:
+                pass
+        else:
+            # 阶段 2：输入框已恢复，等待图片生成完成
+            if elapsed - input_ready_time >= MIN_WAIT_AFTER_INPUT:
+                return
 
-    raise TimeoutError(f"等待 ChatGPT 回复超时（{timeout}s）")
+    raise TimeoutError(f"等待 ChatGPT 图片生成超时（{timeout}s）")
 
 
 async def check_image_or_rejection(page, before_count: int) -> str:

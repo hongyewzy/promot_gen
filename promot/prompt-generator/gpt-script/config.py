@@ -24,7 +24,7 @@ CHATGPT_URL = os.getenv(
 )
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", r"D:\桌面\脚本图中")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "3"))       # 秒
-MAX_WAIT = int(os.getenv("MAX_WAIT", "120"))               # 秒
+MAX_WAIT = int(os.getenv("MAX_WAIT", "180"))               # 秒（输入框恢复后还需等 90s 图片生成）
 SEND_DELAY = int(os.getenv("SEND_DELAY", "2"))             # 发送间隔秒
 
 # ── 页面选择器 ─────────────────────────────────────
